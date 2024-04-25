@@ -1,3 +1,3 @@
 from aiogram import Router
 
-login_router = Router()
+auth_router = Router()

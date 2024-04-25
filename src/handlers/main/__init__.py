@@ -1,1 +1,1 @@
-from .start_cmd import cmd_start
+from .start_bot import cmd_start

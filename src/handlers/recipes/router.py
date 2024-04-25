@@ -1,3 +1,3 @@
 from aiogram import Router
 
-products_router = Router()
+recipes_router = Router()
