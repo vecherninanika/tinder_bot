@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
-
+from aiohttp.client_exceptions import ClientResponseError
+import logging
 import aiohttp
 from aiohttp.typedefs import LooseHeaders
 from multidict import CIMultiDict
@@ -19,29 +20,34 @@ class ClientSessionWithCorrId(aiohttp.ClientSession):
         return headers
 
 
-async def do_request(
-    url: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, Any]] = None
-) -> Any:
+async def post_to_server(url, params=None):
     timeout = aiohttp.ClientTimeout(total=3)
     connector = aiohttp.TCPConnector()
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        try:
+            async with session.post(
+                f'{settings.TINDER_BACKEND_HOST}/{url}',
+                json=params,
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return True, data
+        except ClientResponseError as e:
+            logging.error(e)
+            return False, e
 
-    final_exc = None
-    async with ClientSessionWithCorrId(connector=connector, timeout=timeout) as session:
-        for _ in range(settings.RETRY_COUNT):
-            try:
-                async with session.post(
-                    url,
-                    headers=headers,
-                    json=params,
-                ) as response:
-                    response.raise_for_status()
 
-                    return await response.json()
-            except aiohttp.ClientResponseError as exc:
-                logger.exception('Http error')
-                final_exc = exc
-
-    if final_exc is not None:
-        raise final_exc
-
-    raise RuntimeError('Unsupported')
+async def get_from_server(url, params=None):
+    timeout = aiohttp.ClientTimeout(total=3)
+    connector = aiohttp.TCPConnector()
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+        try:
+            async with session.get(
+                f'{settings.TINDER_BACKEND_HOST}/{url}',
+                json=params,
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return True, data
+        except ClientResponseError as e:
+            return False, e

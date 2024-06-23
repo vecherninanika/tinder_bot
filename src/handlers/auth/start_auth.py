@@ -9,7 +9,7 @@ from src.state.login import LoginState
 
 
 @auth_router.message(F.text == AUTH_BUTTON, LoginState.unauthorized)
-async def cmd_auth(message: types.Message, state: FSMContext):
+async def cmd_auth(message: types.Message):
     await message.answer('Register or log in into existing account', reply_markup=get_keyboard())
 
 
@@ -25,4 +25,3 @@ async def login(message: types.Message, state: FSMContext):
 async def register(message: types.Message, state: FSMContext):
     await state.set_state(LoginState.create_code)
     await message.answer('Create a code to register')
-

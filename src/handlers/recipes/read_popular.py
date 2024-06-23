@@ -6,29 +6,26 @@ from src.buttons.like_recipe import get_keyboard
 from src.buttons.start import POPULAR_BUTTON
 from conf.config import settings
 from src.handlers.recipes.router import recipes_router
+from src.utils.request import get_from_server
 
 
 @recipes_router.message(F.text == POPULAR_BUTTON)
 async def read_popular(message: types.Message, state: FSMContext):
     print("READ POPULAR")
-    
-    timeout = aiohttp.ClientTimeout(total=3)
-    connector = aiohttp.TCPConnector()
 
-    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-        try:
-            async with session.post(
-                    f'{settings.TINDER_BACKEND_HOST}/recipe/read_popular',
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                print(data)
-        except aiohttp.ClientResponseError:
-            return await message.answer("Error")
+    ok, response = await get_from_server('recipe/read_popular')
 
-    if data:
-        for recipe in data:
-            await message.answer(recipe['title'], reply_markup=get_keyboard())
-        return
+    if not ok:
+        return await message.answer(f"Error from server: {response.message}")
 
-    return await message.answer('Not found')
+    if response is []:
+        return await message.answer('There are no recipes yet.', reply_markup=get_keyboard())
+
+    for recipe in response:
+        title = recipe['title']
+        ingredients = ", ".join(recipe['ingredients'])
+        answer = f'{title} \nIngredients: {ingredients}'
+
+        await message.answer(answer, reply_markup=get_keyboard(recipe['id'], recipe['likes']))
+
+    return

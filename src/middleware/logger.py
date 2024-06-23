@@ -1,6 +1,5 @@
 import uuid
 from typing import Any, Awaitable, Callable, Coroutine
-
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -18,7 +17,7 @@ class LogServerMiddleware:
             return
 
         for header, value in scope['headers']:
-            if header == b'x-correlation-id':
+            if header == b'x-correlation-recipe_id':
                 correlation_id_ctx.set(value.decode())
                 break
         else:

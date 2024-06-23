@@ -5,29 +5,26 @@ from aiogram.fsm.context import FSMContext
 
 from conf.config import settings
 from src.handlers.recipes.router import recipes_router
-from src.state.create import CreateState
+from src.state.recipe import CreateState
+from src.state.login import LoginState
+from src.utils.request import post_to_server
+from src.buttons.menu import get_keyboard
 
 
-@recipes_router.callback_query(CreateState.type_ingredients)
+@recipes_router.message(CreateState.type_ingredients)
 async def type_ingredients(message: types.Message, state: FSMContext):
     text = message.text
     ingredients = text.split('\n')
     data = await state.get_data()
-    recipe_title = data['recipe_title']
-    timeout = aiohttp.ClientTimeout(total=3)
-    connector = aiohttp.TCPConnector()
+    recipe_title = data['new_recipe_title']
 
-    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-        try:
-            async with session.post(
-                    f'{settings.TINDER_BACKEND_HOST}/recipe/create',
-                    params={'title': updated_likes}
-            ) as response:
-                data = await response.json()
-                response.raise_for_status()
-        except Exception:
-            logging.exception(f'Error adding like')
-    await callback.message.delete()
+    json = {"title": recipe_title, "ingredients": ingredients, "username": message.from_user.id}
 
-    await state.set_state(CreateState.type_ingredients)
+    ok, response = await post_to_server('recipe/create', params=json)
 
+    if not ok:
+        return await message.answer(f"Error from server: {response.message}")
+
+    await state.set_state(LoginState.authorized)
+
+    await message.answer('Recipe created. You can now see it in "My recipes".', reply_markup=get_keyboard())

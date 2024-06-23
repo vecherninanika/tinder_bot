@@ -6,31 +6,29 @@ from src.buttons.like_recipe import get_keyboard
 from src.buttons.menu import MY_RECIPES_BUTTON
 from conf.config import settings
 from src.handlers.recipes.router import recipes_router
+from src.state.login import LoginState
+from src.utils.request import get_from_server
 
 
-@recipes_router.message(F.text == MY_RECIPES_BUTTON)
+@recipes_router.message(F.text == MY_RECIPES_BUTTON, LoginState.authorized)
 async def read_user_recipes(message: types.Message, state: FSMContext):
     print("READ USER RECIPES")
-    
-    timeout = aiohttp.ClientTimeout(total=3)
-    connector = aiohttp.TCPConnector()
 
     data = await state.get_data()
-    user_id = data['user_data']['id']
-    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-        try:
-            async with session.post(
-                    f'{settings.TINDER_BACKEND_HOST}/recipe/read_user_recipes/{user_id}',
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                print(data)
-        except aiohttp.ClientResponseError:
-            return await message.answer("Error")
+    user_id = data['user_data']['user_id']
 
-    if data:
-        for recipe in data:
-            await message.answer(recipe['title'], reply_markup=get_keyboard())
-        return
+    ok, response = await get_from_server(f'recipe/read_user_recipes/{user_id}')
 
-    return await message.answer('Not found')
+    if not ok:
+        if response.code == 404:
+            return await message.answer("You do not have any recipes yey", reply_markup=get_keyboard())
+        return await message.answer(f'Error from server: {response.message}', reply_markup=get_keyboard())
+
+    if not response:
+        return await message.answer('You do not have recipes yet.', reply_markup=get_keyboard())
+
+    for recipe in response:
+        title = recipe['title']
+        ingredients = ", ".join(recipe['ingredients'])
+        answer = f'{title} \nIngredients: {ingredients}'
+        await message.answer(answer, reply_markup=get_keyboard())

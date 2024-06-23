@@ -13,8 +13,7 @@ async def start_polling() -> None:
     await bot.set_my_commands(
         [
             BotCommand(command='start', description='Start bot'),
-            BotCommand(command='help', description='Log in'),
-            BotCommand(command='menu', description='Log in'),
+            BotCommand(command='help', description='Help'),
             BotCommand(command='register', description='Register'),
             BotCommand(command='login', description='Log in'),
         ]
